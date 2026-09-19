@@ -120,8 +120,9 @@ export default function (pi: ExtensionAPI) {
       "Use desktop to interact with any desktop window without approval. " +
         "Pass window_address or search to target a specific window; omit both for the focused window.",
       "desktop screenshot returns an image attachment. Use it before click/scroll to see the window.",
-      "desktop click and scroll use absolute pixel coordinates within the window (x_px, y_px). " +
-        "Take a screenshot first, note the window size, then compute pixel positions.",
+      "desktop click and scroll accept normalized coordinates (x_pct, y_pct) as 0.0-1.0 fractions of window size. " +
+        "Prefer x_pct/y_pct over x_px/y_px — e.g. center=(0.5,0.5), top-left=(0.1,0.1), bottom-right=(0.9,0.9). " +
+        "Take a screenshot first to see what's on screen, then estimate the fractional position.",
     ],
     parameters: Type.Object({
       action: StringEnum([
@@ -225,7 +226,7 @@ export default function (pi: ExtensionAPI) {
               return {
                 content: [
                   { type: "image", source: { type: "base64", mediaType: "image/jpeg", data } },
-                  { type: "text", text: `Screenshot of ${win.class} — "${win.title}" (${ww}×${wh} at ${wx},${wy})` },
+                  { type: "text", text: `Screenshot of ${win.class} — "${win.title}" (${ww}×${wh} at ${wx},${wy}). Use x_pct/y_pct (0.0-1.0) to click relative to window: 0.0=left/top, 0.5=center, 1.0=right/bottom. Or x_px/y_px for pixel offset.` },
                 ],
                 details: {},
               };
@@ -329,8 +330,8 @@ export default function (pi: ExtensionAPI) {
               return err(errMsg);
             }
             const [wx, wy] = win.at;
-            const xPx = params.x_px ?? Math.round(win.size[0] / 2);
-            const yPx = params.y_px ?? Math.round(win.size[1] / 2);
+            const xPx = params.x_px ?? (params.x_pct != null ? Math.round(params.x_pct * win.size[0]) : Math.round(win.size[0] / 2));
+            const yPx = params.y_px ?? (params.y_pct != null ? Math.round(params.y_pct * win.size[1]) : Math.round(win.size[1] / 2));
             const steps = params.scroll_steps ?? 3;
             focusWindow(win.address);
             await sleep(30);
