@@ -13,12 +13,51 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { execSync, execFileSync } from "node:child_process";
-import { readFileSync, unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync, appendFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 
 export default function (pi: ExtensionAPI) {
+  const LOG_DIR = join(process.env.HOME!, ".local", "share", "pi-desktop");
+  const LOG_FILE = join(LOG_DIR, "training-data.jsonl");
+
+  function ensureLogDir() {
+    try {
+      if (!existsSync(LOG_DIR)) {
+        mkdirSync(LOG_DIR, { recursive: true });
+      }
+    } catch {}
+  }
+
+  function logTrainingData(
+    action: string,
+    params: any,
+    windowState: any | null,
+    allWindows: any[],
+    result: string,
+    isError: boolean
+  ) {
+    try {
+      ensureLogDir();
+      const entry = {
+        timestamp: new Date().toISOString(),
+        action,
+        params,
+        window_state: windowState,
+        all_windows: allWindows.map((c: any) => ({
+          address: c.address,
+          class: c.class,
+          title: c.title,
+          workspace: c.workspace?.name,
+        })),
+        result,
+        is_error: isError,
+      };
+      appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n");
+    } catch {}
+  }
+
   function run(cmd: string): string {
     return execSync(cmd, { encoding: "utf-8", timeout: 10_000 }).trim();
   }
@@ -132,6 +171,7 @@ export default function (pi: ExtensionAPI) {
     }),
 
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+      const allWindows = params.action !== "list_windows" ? getClients() : [];
       try {
         switch (params.action) {
           case "list_windows": {
@@ -157,9 +197,19 @@ export default function (pi: ExtensionAPI) {
 
           case "focus": {
             const win = findWindow(params.window_address, params.search);
-            if (!win) return err("Window not found");
+            if (!win) {
+              const errMsg = "Window not found";
+              logTrainingData("focus", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
             focusWindow(win.address);
-            return ok(`Focused: ${win.class} — ${win.title}`);
+            const result = `Focused: ${win.class} — ${win.title}`;
+            const windowState = {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            };
+            logTrainingData("focus", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           case "screenshot": {
@@ -185,22 +235,46 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "type": {
-            if (!params.text) return err("text is required for type action");
+            if (!params.text) {
+              const errMsg = "text is required for type action";
+              logTrainingData("type", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
+            let win: any = null;
             if (params.window_address || params.search) {
-              const win = findWindow(params.window_address, params.search);
-              if (!win) return err("Window not found");
+              win = findWindow(params.window_address, params.search);
+              if (!win) {
+                const errMsg = "Window not found";
+                logTrainingData("type", params, null, allWindows, errMsg, true);
+                return err(errMsg);
+              }
               focusWindow(win.address);
               await sleep(50);
             }
             runFile("wtype", [params.text]);
-            return ok(`Typed ${params.text.length} chars`);
+            const result = `Typed ${params.text.length} chars`;
+            const windowState = win ? {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            } : null;
+            logTrainingData("type", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           case "key": {
-            if (!params.key) return err("key is required for key action");
+            if (!params.key) {
+              const errMsg = "key is required for key action";
+              logTrainingData("key", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
+            let win: any = null;
             if (params.window_address || params.search) {
-              const win = findWindow(params.window_address, params.search);
-              if (!win) return err("Window not found");
+              win = findWindow(params.window_address, params.search);
+              if (!win) {
+                const errMsg = "Window not found";
+                logTrainingData("key", params, null, allWindows, errMsg, true);
+                return err(errMsg);
+              }
               focusWindow(win.address);
               await sleep(50);
             }
@@ -214,12 +288,22 @@ export default function (pi: ExtensionAPI) {
               const mk = modMap[mod]; if (mk) args.push("-m", mk);
             }
             runFile("wtype", args);
-            return ok(`Pressed ${mods.length ? mods.join("+") + "+" : ""}${params.key}`);
+            const result = `Pressed ${mods.length ? mods.join("+") + "+" : ""}${params.key}`;
+            const windowState = win ? {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            } : null;
+            logTrainingData("key", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           case "click": {
             const win = findWindow(params.window_address, params.search);
-            if (!win) return err("Window not found");
+            if (!win) {
+              const errMsg = "Window not found";
+              logTrainingData("click", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
             const [wx, wy] = win.at;
             const xPx = params.x_px ?? Math.round(win.size[0] / 2);
             const yPx = params.y_px ?? Math.round(win.size[1] / 2);
@@ -228,12 +312,22 @@ export default function (pi: ExtensionAPI) {
             moveCursor(wx + xPx, wy + yPx);
             await sleep(10);
             click(params.button || "left");
-            return ok(`Clicked ${params.button || "left"} at (${xPx}, ${yPx}) in ${win.class}`);
+            const result = `Clicked ${params.button || "left"} at (${xPx}, ${yPx}) in ${win.class}`;
+            const windowState = {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            };
+            logTrainingData("click", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           case "scroll": {
             const win = findWindow(params.window_address, params.search);
-            if (!win) return err("Window not found");
+            if (!win) {
+              const errMsg = "Window not found";
+              logTrainingData("scroll", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
             const [wx, wy] = win.at;
             const xPx = params.x_px ?? Math.round(win.size[0] / 2);
             const yPx = params.y_px ?? Math.round(win.size[1] / 2);
@@ -243,14 +337,30 @@ export default function (pi: ExtensionAPI) {
             moveCursor(wx + xPx, wy + yPx);
             await sleep(10);
             scroll(steps);
-            return ok(`Scrolled ${steps > 0 ? "down" : "up"} ${Math.abs(steps)} steps in ${win.class}`);
+            const result = `Scrolled ${steps > 0 ? "down" : "up"} ${Math.abs(steps)} steps in ${win.class}`;
+            const windowState = {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            };
+            logTrainingData("scroll", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           case "close": {
             const win = findWindow(params.window_address, params.search);
-            if (!win) return err("Window not found");
+            if (!win) {
+              const errMsg = "Window not found";
+              logTrainingData("close", params, null, allWindows, errMsg, true);
+              return err(errMsg);
+            }
             closeWindow(win.address);
-            return ok(`Closed: ${win.class} — ${win.title}`);
+            const result = `Closed: ${win.class} — ${win.title}`;
+            const windowState = {
+              address: win.address, class: win.class, title: win.title,
+              workspace: win.workspace?.name, position: win.at, size: win.size,
+            };
+            logTrainingData("close", params, windowState, allWindows, result, false);
+            return ok(result);
           }
 
           default:
