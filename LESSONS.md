@@ -108,12 +108,39 @@ grim -s 1 -g "x,y WxH" -t png /tmp/out.png
 - Geometry uses **logical** coordinates (Hyprland layout coords)
 - `-t png` or `-t jpeg -q 80`
 
-## 4. Strata file browser
+## 4. Strata file browser (io.github.lgse.Strata) — app profile
 
-- **Open folder**: select it, press Enter (or click the `>` arrow)
-- **Copy file path**: select file, press Ctrl+C → full path goes to clipboard
-- **Verify clipboard**: `wl-paste` shows what's copied
-- Double-click may not reliably open folders; Enter after single-click is safer
+**Launch:** `nohup strata &` — `hl.dsp.exec_cmd` silently did nothing twice.
+hyprdesk `launch -- strata` works (event-driven, ~170ms to address).
+Opens half-size in `special:reprieve`; move to a workspace and
+`hypr fullscreen` to get the full 1416×850 layout the geometry below assumes.
+**kev:** "the file browser" / "the file manager" → 99–100%.
+
+**Layout (fullscreen, fractions of window):**
+- Sidebar x≈0.053. Rows: Home 0.078, Trash 0.123, Network 0.168,
+  Documents 0.230, Downloads 0.275, Pictures 0.320, Videos 0.365,
+  Projects 0.450, Work 0.495. Hover shows a path tooltip.
+- File list column x≈0.21–0.35; first row y≈0.117, row pitch ≈0.033.
+  Folders show `>` at the right edge (x≈0.35).
+- Footer (y≈0.98) lists the live keymap — read it before guessing.
+
+**Keys (from footer):** ↑↓ navigate · Enter open · Space preview ·
+Ctrl+F filter · **Ctrl+C / Ctrl+X copy / cut** (Ctrl+C on a file puts its
+full path on the clipboard — verify with `wl-paste`) · Del trash · F1 shortcuts.
+Right-click → context menu: Open, Open With…, Quick preview, Print, Cut,
+Copy, **Copy path (Y)**, Copy name, **Move to…, Copy to…**, Rename,
+Compress…, Customize…, Properties, Move to Trash, Permanently delete.
+
+**Pointer behaviour:**
+- Single click selects; Enter opens. Double-click is unreliable for folders.
+- **Press-and-drag across rows = rubber-band sweep-select**, NOT drag-and-drop.
+  Verified with hyprdesk's unified pointer (mid-drag screenshot shows every
+  swept row highlighted). Strata has no row DnD; move files via
+  "Move to…" or Ctrl+X → navigate → Ctrl+V.
+- Sidebar can scroll: if only DEVICES is visible, the nav items are above.
+
+**a11y:** exposes 1 AT-SPI element (the sidebar toggle). The file list is
+custom-drawn — `ui`/`click_ui` are useless here; use fractions above.
 
 ## 5. Pi extension image return format
 
@@ -328,28 +355,13 @@ is also the signal that the app may need launching.
 
 Start: `./kev-serve.sh` (in this repo). Bench: `python3 kev_bench.py`.
 
-## 20. Drag-and-drop: hyprdesk's unified pointer works; Strata has no DnD (T16)
+## 20. Drag-and-drop (T16) — resolved
 
-Strata never enters drag mode with `ydotool click 0x40` (press) +
-`hyprctl movecursor` (motion) + `ydotool click 0x80` (release). No drag
-ghost during the hold, no drop-target highlight, file doesn't move. A ghost
-appears *after* release — the app is only seeing a click-select.
-
-Likely cause: the button events come from ydotool's uinput device and the
-motion from the compositor's cursor dispatcher — two different pointers on
-the seat. Wayland DnD (`wl_data_device.start_drag`) requires an implicit
-grab on the *same* pointer that pressed the button.
-
-**Resolved with hyprdesk** (`pointer drag`, one `zwlr_virtual_pointer_v1`
-client for press+motion+release). Mid-drag screenshot shows Strata doing a
-**rubber-band sweep-select** across the rows passed — i.e. the app receives a
-proper drag gesture; it just implements sweep-select, not row DnD. Strata's
-move UX is the context menu's "Move to…" or Ctrl+X / Ctrl+V.
-So: pointer ✓, Strata DnD ✗ (by design). Retest DnD on an app that has it
-(a browser file upload zone, GIMP, Blender).
-
-Workaround for file moves: Strata's context menu has "Move to…" / "Copy to…",
-or just `mv` in a terminal.
+hyprdesk's `pointer drag` (single `zwlr_virtual_pointer_v1` client for
+press+motion+release) delivers a real drag gesture. The morning failure was
+the split-device stack (ydotool button + hyprctl motion). The remaining
+"failure" is app-side: Strata implements sweep-select, not row DnD — see the
+Strata profile (§4). Retest DnD on an app with drop targets.
 
 ## 21. kev gate: 50% is right, but similar-titled windows can clear it wrongly
 
