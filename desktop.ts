@@ -212,10 +212,16 @@ export default function (pi: ExtensionAPI) {
         )
       ),
       x_px: Type.Optional(
-        Type.Number({ description: "X pixel offset within window (action=click/scroll)" })
+        Type.Number({ description: "X pixel offset within window (action=click/scroll). Use this OR x_pct." })
       ),
       y_px: Type.Optional(
-        Type.Number({ description: "Y pixel offset within window (action=click/scroll)" })
+        Type.Number({ description: "Y pixel offset within window (action=click/scroll). Use this OR y_pct." })
+      ),
+      x_pct: Type.Optional(
+        Type.Number({ description: "X as 0.0-1.0 fraction of window width (action=click/scroll). 0=left, 0.5=center, 1=right.", minimum: 0, maximum: 1 })
+      ),
+      y_pct: Type.Optional(
+        Type.Number({ description: "Y as 0.0-1.0 fraction of window height (action=click/scroll). 0=top, 0.5=center, 1=bottom.", minimum: 0, maximum: 1 })
       ),
       button: Type.Optional(
         StringEnum(["left", "right", "middle"] as const, {
@@ -365,8 +371,8 @@ export default function (pi: ExtensionAPI) {
               return err(errMsg);
             }
             const [wx, wy] = win.at;
-            const xPx = params.x_px ?? Math.round(win.size[0] / 2);
-            const yPx = params.y_px ?? Math.round(win.size[1] / 2);
+            const xPx = params.x_px ?? (params.x_pct != null ? Math.round(params.x_pct * win.size[0]) : Math.round(win.size[0] / 2));
+            const yPx = params.y_px ?? (params.y_pct != null ? Math.round(params.y_pct * win.size[1]) : Math.round(win.size[1] / 2));
             focusWindow(win.address);
             await sleep(30);
             moveCursor(wx + xPx, wy + yPx);
