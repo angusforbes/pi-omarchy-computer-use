@@ -95,6 +95,12 @@ Find or open a Chromium browser. Open a new tab, navigate to Google, and search 
 ```
 This tests vision-action loops (read board → decide → click), strategic reasoning, cross-app output, and sustained multi-turn interaction with a live web widget.
 
+### Test 23: Music player end-to-end (vibezAI)
+Open the vibezAI music player (launch it if not running). Search Apple Music for songs by Billy Idol. Pick any result and move it to the tracks list, then play it. Open the volume widget and set volume to 25%. Wait 30 seconds. Press `T` to load songs from the library, then press `n` to advance to the next song. Tests: app launch, in-app search, drag/move to a list (or the app's equivalent), a slider widget, timed wait, and app-specific keyboard shortcuts.
+
+### Test 24: Slack — find a dated message and save its attachment
+Open Slack. Find the DM conversation with Oge Marques. Navigate to the first message dated 9/16. Download the image attached to that message into ~/Downloads, then open the downloaded image. Tests: search within a chat app, scrolling/navigating by date, hovering to reveal a download control, a file-save flow, and verifying the file landed.
+
 ---
 
 ## Scoring
