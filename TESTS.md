@@ -112,3 +112,39 @@ This tests vision-action loops (read board → decide → click), strategic reas
 - Window addresses will need to be resolved at test time via `hyprctl clients -j`
 - The `wl-paste` + `wtype` pattern should be used instead of Ctrl+Shift+V for pasting
 - Crop screenshots to the smallest useful region
+
+---
+
+## Run 2 — 2026-09-19, `desktop` tool + kev-4b window selection
+
+| # | Test | Result | kev used | Notes |
+|---|---|---|---|---|
+| 1 | List windows | ✅ | – | |
+| 2 | Screenshot active | ✅ | – | needed image-format fix (Lesson 5) |
+| 3 | Focus by description | ✅ | 98% / 231ms | "the google tic-tac-toe tab" |
+| 4 | Type into terminal | ✅ | 76% | "the shell on workspace 2" |
+| 5 | Click at pct | ✅ | – | x_pct/y_pct needed a fix — was silently hitting center |
+| 6 | Navigate folder | ✅ | 99% | Strata launched via nohup; `hl.dsp.exec_cmd` did nothing |
+| 7 | Workspace + screenshot | ✅ | – | |
+| 8 | Right-click menu | ✅ | – | full Strata context menu |
+| 9 | Scroll page | ✅ | – | needed window_address: two Chromiums, identical titles |
+| 10 | New tab | ✅ | – | Ctrl+T via wtype |
+| 11 | Cross-window read→type | ✅ | 78% | hostname+uptime → Google |
+| 12 | File → terminal | ✅ | – | wc -l on repo .md files |
+| 13 | Browser form fill | ✅ | – | GitHub repo search |
+| 14 | Multi-workspace roundtrip | ✅ | 100/57/86% | one wrong pick at 57% — see Lesson 21 |
+| 15 | Window management | ✅ | – | move ws3→ws4→ws3 |
+| 16 | Drag and drop | 🔁 | – | split-device stack can't DnD — Lesson 20 |
+| 17 | Multi-tab navigation | ✅ | – | Chromium hover-preview ate first click |
+| 18 | Keyboard chain | ✅ | 78% | |
+| 19 | Read screen → act | ✅ | 99% | exposed screenshot-wrong-workspace bug, fixed |
+| 20 | Timed full workflow | ✅ | – | **39.0s** wall clock; ~1.5s desktop, rest is model turns |
+| 21 | Command runner | ✅ | 78% | |
+| 22 | Tic-tac-toe | ✅ | – | 6.3s, 4 moves, 0 LLM calls; first attempt read a cartoon |
+
+**21/22 pass, 1 partial.** kev resolved 10 natural-language targets, 9 correct;
+the one miss was 57% (barely over gate) between two same-class windows.
+
+Three bugs found and fixed by the run: tool-result image format, click
+ignoring x_pct, screenshot not switching workspace. Two limits documented:
+DnD needs a unified virtual pointer; identical titles need window_address.
