@@ -411,3 +411,19 @@ Click the icon to open a panel at screen ≈(1057–1440, 30–430):
 - Window title is `"<Person> (DM) - <Workspace> - Slack"` — kev matches
   "slack" alone at 100% when it's open.
 - `xdg-open image.png` → imv (title shows dims and path).
+
+Slack navigation (from T25):
+- **`Ctrl+K`** → type a name → `Enter` opens that DM. First result is the 1:1;
+  group DMs listed below. Much faster than hunting the sidebar.
+- **Mouse-wheel scrolling in the message pane is unreliable**: heavy dampening
+  on slow wheel events (~4px/step), acceleration on fast ones (20 steps jumped
+  from 9/16 back to July 29th), and it snaps to the latest message on
+  overshoot. **Use `Page_Up`/`Page_Down`** after clicking in the message pane
+  — deterministic, one screen per press.
+- The sticky date header ("Wednesday, September 16th ▾") shows which day the
+  *top visible* message belongs to. Use it to know where you are.
+- Inline links render as `🔗 domain` chips; link previews (unfurls) below
+  them are also clickable but the chip is the reliable target.
+- Clicking a link opens it in the default browser, reusing an existing
+  Chromium window and switching its active tab. Verify by checking the
+  window title changed.
