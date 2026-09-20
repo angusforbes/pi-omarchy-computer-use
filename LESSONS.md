@@ -362,3 +362,17 @@ Also: `hl.dsp.exec_cmd({cmd="strata"})` silently did nothing twice;
 `nohup strata &` from bash worked. And `timeout N app &` for a GUI app kills
 it after N seconds — obvious in hindsight, cost a confused minute.
 Screensaver: `omarchy toggle screensaver` is the native way, not systemd-inhibit.
+
+## 22. vibezAI (terminal Apple Music player, ~/Work/vibezAI)
+
+Go TUI, keyboard-only, two columns: **Tracks** (left) | **Search** (right).
+Launch: `vibezAI` in a terminal. Search sources cycle with `Ctrl+/`:
+AM (Apple Music) → AI (Claude plans terms) → SV (saved lists) → FE (recs).
+
+Search flow: `Ctrl+'` (start typing) → text → `Enter` (runs AM search).
+Results: `Ctrl+↑/↓` move highlight · `→` open/fold section · `Ctrl+→` toggle
+select · `Ctrl+,` add to Tracks · **`Ctrl+.` add and play**.
+Tracks: `space` play/pause · `n`/`p` next/prev · `T` insert 5 random from
+library · `R` 5 related · `c` clear · `Tab` swap columns · `:q` quit.
+No in-app volume — use `wpctl set-volume @DEFAULT_AUDIO_SINK@ 25%` or the
+omarchy bar widget.
