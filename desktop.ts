@@ -94,18 +94,75 @@ export default function (pi: ExtensionAPI) {
     return JSON.parse(run("hyprctl activewindow -j"));
   }
 
-  function findWindow(address?: string, search?: string): any {
+  // ── kev: local decision model for natural-language window selection ──
+  const KEV_URL = process.env.KEV_URL ?? "http://127.0.0.1:8009/v1/systemone";
+  const KEV_GATE = 0.5;   // below this, kev's pick is reported but flagged as uncertain
+  const APP_HINTS: Record<string, string> = {
+    "io.github.lgse.Strata": "Strata file browser, file manager",
+    "foot": "foot terminal, shell, command line",
+    "chromium": "Chromium web browser", "brave-origin": "Brave web browser",
+    "slack": "Slack chat, messaging", "md.obsidian.Obsidian": "Obsidian notes, markdown",
+    "org.omarchy.agent": "AI agent pane, Claude Code, assistant chat",
+  };
+  function describeWin(c: any): string {
+    let t: string = c.title ?? "";
+    for (const s of [" - Chromium", " - Brave Origin", " - Google Search", " - Slack"]) t = t.replace(s, "");
+    t = t.replace(/^[\s✳◑●○]+|[\s✳◑●○]+$/g, "").slice(0, 60);
+    return `${t} — ${APP_HINTS[c.class] ?? c.class}`;
+  }
+  /** Ask kev which window matches. Returns {win, p, ms} or null if kev is down. */
+  async function kevPick(query: string, clients: any[]): Promise<{ win: any; p: number; ms: number } | null> {
+    if (clients.length === 0) return null;
+    if (clients.length === 1) return { win: clients[0], p: 1, ms: 0 };
+    const criteria: Record<string, string> = {};
+    for (const c of clients) criteria[c.address] = describeWin(c);
+    const body = { model: "kev", state: `The user wants to interact with: "${query}"`,
+      questions: { w: { type: "choice", instructions: "Which open window best matches what the user described?", criteria } } };
+    const t0 = Date.now();
+    try {
+      const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 3000);
+      const r = await fetch(KEV_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal });
+      clearTimeout(tm);
+      if (!r.ok) return null;
+      const j: any = await r.json();
+      const a = j.answers?.w; if (!a) return null;
+      const win = clients.find((c: any) => c.address === a.choice);
+      return win ? { win, p: a.probabilities[a.choice], ms: Date.now() - t0 } : null;
+    } catch { return null; }
+  }
+  let lastPick: { query: string; p: number; ms: number; via: string } | null = null;
+
+  function visibleClients(): any[] {
+    return getClients().filter((c: any) => c.mapped && c.workspace?.name !== "special:reprieve");
+  }
+
+  async function findWindow(address?: string, search?: string): Promise<any> {
+    lastPick = null;
     const clients = getClients();
     if (address) return clients.find((c: any) => c.address === address);
     if (search) {
+      // 1. exact substring on class/title — free, and right when the caller already knows the name
       const q = search.toLowerCase();
-      return clients.find(
-        (c: any) =>
-          c.class?.toLowerCase().includes(q) ||
-          c.title?.toLowerCase().includes(q)
-      );
+      const exact = clients.find((c: any) => c.class?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q));
+      if (exact) { lastPick = { query: search, p: 1, ms: 0, via: "substring" }; return exact; }
+      // 2. kev — natural language ("the file browser", "that youtube tab")
+      const k = await kevPick(search, visibleClients());
+      if (k) { lastPick = { query: search, p: k.p, ms: k.ms, via: "kev" }; return k.p >= KEV_GATE ? k.win : null; }
+      return null;
     }
     return getActiveWindow();
+  }
+  /** Suffix for result text: how the window was chosen. */
+  function pickNote(): string {
+    if (!lastPick || lastPick.via === "substring") return "";
+    return ` [kev: ${(lastPick.p * 100).toFixed(0)}% in ${lastPick.ms}ms]`;
+  }
+  function notFound(search?: string): string {
+    if (lastPick && lastPick.via === "kev") {
+      return `No confident match for "${search}" (kev best guess ${(lastPick.p * 100).toFixed(0)}% < ${KEV_GATE * 100}%). ` +
+             `The app may not be open — check list_windows, or launch it.`;
+    }
+    return `Window not found for "${search ?? "(active)"}"`;
   }
 
   pi.registerTool({
@@ -118,7 +175,9 @@ export default function (pi: ExtensionAPI) {
       "Desktop control — screenshot any window, type, click, scroll, focus, list windows (no approval needed)",
     promptGuidelines: [
       "Use desktop to interact with any desktop window without approval. " +
-        "Pass window_address or search to target a specific window; omit both for the focused window.",
+        "Pass window_address or search to target a specific window; omit both for the focused window. " +
+        "search accepts natural language ('the file browser') — a local kev model resolves it in ~200ms. " +
+        "If it says no confident match, the app is probably not open: check list_windows or launch it.",
       "desktop screenshot returns an image attachment. Use it before click/scroll to see the window.",
       "desktop click and scroll accept normalized coordinates (x_pct, y_pct) as 0.0-1.0 fractions of window size. " +
         "Prefer x_pct/y_pct over x_px/y_px — e.g. center=(0.5,0.5), top-left=(0.1,0.1), bottom-right=(0.9,0.9). " +
@@ -133,7 +192,7 @@ export default function (pi: ExtensionAPI) {
         Type.String({ description: "Hyprland window address (e.g. 0x55a67366ab70)" })
       ),
       search: Type.Optional(
-        Type.String({ description: "Substring match on class or title" })
+        Type.String({ description: "Window to target. Exact substring of class/title is tried first (free); otherwise natural language via local kev model, e.g. 'the file browser', 'that youtube tab', 'my terminal'. Result notes kev confidence when used." })
       ),
       text: Type.Optional(
         Type.String({ description: "Text to type (action=type)" })
@@ -197,14 +256,14 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "focus": {
-            const win = findWindow(params.window_address, params.search);
+            const win = await findWindow(params.window_address, params.search);
             if (!win) {
-              const errMsg = "Window not found";
+              const errMsg = notFound(params.search);
               logTrainingData("focus", params, null, allWindows, errMsg, true);
               return err(errMsg);
             }
             focusWindow(win.address);
-            const result = `Focused: ${win.class} — ${win.title}`;
+            const result = `Focused: ${win.class} — ${win.title}` + pickNote();
             const windowState = {
               address: win.address, class: win.class, title: win.title,
               workspace: win.workspace?.name, position: win.at, size: win.size,
@@ -214,8 +273,8 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "screenshot": {
-            const win = findWindow(params.window_address, params.search);
-            if (!win) return err("Window not found");
+            const win = await findWindow(params.window_address, params.search);
+            if (!win) return err(notFound(params.search));
             const [wx, wy] = win.at;
             const [ww, wh] = win.size;
             const tmpFile = join(tmpdir(), `pi-desktop-${randomUUID()}.jpg`);
@@ -226,7 +285,7 @@ export default function (pi: ExtensionAPI) {
               return {
                 content: [
                   { type: "image", source: { type: "base64", mediaType: "image/jpeg", data } },
-                  { type: "text", text: `Screenshot of ${win.class} — "${win.title}" (${ww}×${wh} at ${wx},${wy}). Use x_pct/y_pct (0.0-1.0) to click relative to window: 0.0=left/top, 0.5=center, 1.0=right/bottom. Or x_px/y_px for pixel offset.` },
+                  { type: "text", text: `Screenshot of ${win.class} — "${win.title}" (${ww}×${wh} at ${wx},${wy})${pickNote()}. Use x_pct/y_pct (0.0-1.0) to click relative to window: 0.0=left/top, 0.5=center, 1.0=right/bottom. Or x_px/y_px for pixel offset.` },
                 ],
                 details: {},
               };
@@ -243,9 +302,9 @@ export default function (pi: ExtensionAPI) {
             }
             let win: any = null;
             if (params.window_address || params.search) {
-              win = findWindow(params.window_address, params.search);
+              win = await findWindow(params.window_address, params.search);
               if (!win) {
-                const errMsg = "Window not found";
+                const errMsg = notFound(params.search);
                 logTrainingData("type", params, null, allWindows, errMsg, true);
                 return err(errMsg);
               }
@@ -270,9 +329,9 @@ export default function (pi: ExtensionAPI) {
             }
             let win: any = null;
             if (params.window_address || params.search) {
-              win = findWindow(params.window_address, params.search);
+              win = await findWindow(params.window_address, params.search);
               if (!win) {
-                const errMsg = "Window not found";
+                const errMsg = notFound(params.search);
                 logTrainingData("key", params, null, allWindows, errMsg, true);
                 return err(errMsg);
               }
@@ -299,9 +358,9 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "click": {
-            const win = findWindow(params.window_address, params.search);
+            const win = await findWindow(params.window_address, params.search);
             if (!win) {
-              const errMsg = "Window not found";
+              const errMsg = notFound(params.search);
               logTrainingData("click", params, null, allWindows, errMsg, true);
               return err(errMsg);
             }
@@ -313,7 +372,7 @@ export default function (pi: ExtensionAPI) {
             moveCursor(wx + xPx, wy + yPx);
             await sleep(10);
             click(params.button || "left");
-            const result = `Clicked ${params.button || "left"} at (${xPx}, ${yPx}) in ${win.class}`;
+            const result = `Clicked ${params.button || "left"} at (${xPx}, ${yPx}) in ${win.class}` + pickNote();
             const windowState = {
               address: win.address, class: win.class, title: win.title,
               workspace: win.workspace?.name, position: win.at, size: win.size,
@@ -323,9 +382,9 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "scroll": {
-            const win = findWindow(params.window_address, params.search);
+            const win = await findWindow(params.window_address, params.search);
             if (!win) {
-              const errMsg = "Window not found";
+              const errMsg = notFound(params.search);
               logTrainingData("scroll", params, null, allWindows, errMsg, true);
               return err(errMsg);
             }
@@ -338,7 +397,7 @@ export default function (pi: ExtensionAPI) {
             moveCursor(wx + xPx, wy + yPx);
             await sleep(10);
             scroll(steps);
-            const result = `Scrolled ${steps > 0 ? "down" : "up"} ${Math.abs(steps)} steps in ${win.class}`;
+            const result = `Scrolled ${steps > 0 ? "down" : "up"} ${Math.abs(steps)} steps in ${win.class}` + pickNote();
             const windowState = {
               address: win.address, class: win.class, title: win.title,
               workspace: win.workspace?.name, position: win.at, size: win.size,
@@ -348,14 +407,14 @@ export default function (pi: ExtensionAPI) {
           }
 
           case "close": {
-            const win = findWindow(params.window_address, params.search);
+            const win = await findWindow(params.window_address, params.search);
             if (!win) {
-              const errMsg = "Window not found";
+              const errMsg = notFound(params.search);
               logTrainingData("close", params, null, allWindows, errMsg, true);
               return err(errMsg);
             }
             closeWindow(win.address);
-            const result = `Closed: ${win.class} — ${win.title}`;
+            const result = `Closed: ${win.class} — ${win.title}` + pickNote();
             const windowState = {
               address: win.address, class: win.class, title: win.title,
               workspace: win.workspace?.name, position: win.at, size: win.size,
