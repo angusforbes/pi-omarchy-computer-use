@@ -1,85 +1,16 @@
-# pi-omarchy-computer-use
+# pi-omarchy-computer-use → moved to [hyprcu](https://github.com/angusforbes/hyprcu)
 
-Dialog-free desktop control for [Pi](https://github.com/angusforbes/pi) agents on [Omarchy](https://omarchy.com) (Hyprland/Wayland).
+This repo was the working notebook for building a dialog-free computer-use
+tool for Hyprland during Sept 2026. Everything in it now lives in
+**[angusforbes/hyprcu](https://github.com/angusforbes/hyprcu)**:
 
-No leases. No approval dialogs. No ydotool. No daemon. No root.
+- `LESSONS.md`, `TESTS.md` → `hyprcu/docs/`
+- `kev_bench.py`, `kev-serve.sh`, `ttt*.py`, `window_pick.py` → `hyprcu/tools/`
+- `desktop.ts` (the Pi extension) → retired; its features (kev natural-language
+  targeting, `x_pct`/`y_pct`, training log) are in hyprcu's `pick.py`,
+  `pointer`, and `journal.py`
 
-## Stack
+The name was wrong twice over: nothing here needed Pi (hyprcu is an MCP
+server + CLI, agent-agnostic), and only three notes were Omarchy-specific.
 
-| Tool | Purpose | Speed |
-|---|---|---|
-| `hyprctl dispatch` | Cursor movement, window focus, workspace switch, close | ~13ms |
-| `wlrctl` | Clicks, scroll (Wayland `zwlr_virtual_pointer_v1`) | ~7ms |
-| `wtype` | Typing, key combos (Wayland `zwp_virtual_keyboard_v1`) | ~5ms |
-| `grim` | Screenshots (JPEG q90 default) | ~65ms |
-
-Pure Wayland. No evdev, no daemon, no coordinate translation.
-
-## Files
-
-- **`desktop.ts`** — Pi extension, registers the `desktop` tool. Install by symlinking to `~/.pi/agent/extensions/`
-- **`LESSONS.md`** — Hard-won notes on Hyprland Lua dispatch, coordinate systems, wtype/wlrctl quirks, app interactions
-- **`TESTS.md`** — 22 desktop interaction tests of increasing complexity
-
-## Install
-
-```bash
-ln -sf $(pwd)/desktop.ts ~/.pi/agent/extensions/desktop.ts
-ln -sf $(pwd)/LESSONS.md ~/.pi/agent/notes/desktop-control-lessons.md
-```
-
-Then `/reload` in any Pi session.
-
-## Requirements
-
-- Hyprland 0.56+ (Lua dispatch)
-- `grim` — Wayland screenshot
-- `wtype` — Wayland virtual keyboard
-- `wlrctl` — Wayland virtual pointer (`yay -S wlrctl`)
-
-## Actions
-
-| Action | Description |
-|---|---|
-| `list_windows` | List all windows with address, class, title, geometry |
-| `active_window` | Get focused window info |
-| `focus` | Focus a window by address or search |
-| `screenshot` | Screenshot any window (returns inline JPEG) |
-| `type` | Type text into any window |
-| `key` | Press keys with modifiers (ctrl/alt/shift/super) |
-| `click` | Click at pixel coordinates within a window |
-| `scroll` | Scroll at pixel coordinates |
-| `close` | Close any window |
-
-Target windows by `window_address`, `search` (class/title substring), or omit both for the focused window.
-
-## Performance
-
-Full file-browser-to-terminal pipeline (switch workspace → click file → copy path → switch back → click terminal → type command → enter):
-
-| Iteration | Time | Change |
-|---|---|---|
-| v1 ydotool everything | 2620ms | baseline |
-| v2 hyprctl cursor + ydotool click | 1187ms | -55% |
-| v3 + wlrctl click | 845ms | -68% |
-| v4 + wtype keys, drop ydotool | 602ms | -77% |
-
-## Inspired by
-
-- [hypruse](https://github.com/IlyasKhallouki/hypruse) — MCP server for Hyprland computer use. Taught us to use `hyprctl dispatch movecursor` + Wayland virtual pointer instead of ydotool.
-
-## License
-
-MIT
-
-## Status (2026-09-20): superseded by hyprdesk
-
-`desktop.ts` has been retired. Everything it did — and its three unique
-features (kev natural-language `search`, `x_pct`/`y_pct`, the training log)
-— now lives in [hyprdesk](https://github.com/angusforbes/hyprdesk), a fork
-of hypruse that also brings `sequence`, `wait_for`, event-driven `launch`,
-a unified virtual pointer (drag works) and a CLI. One tool instead of two.
-
-This repo keeps: LESSONS.md (app profiles + hard-won notes), TESTS.md (25
-tests, results), kev_bench.py / kev-serve.sh, ttt.sh / ttt_fast.py, and the
-retired extension for reference.
+Archived 2026-09-20. History preserved here; no further changes.
