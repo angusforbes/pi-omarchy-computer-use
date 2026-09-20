@@ -101,6 +101,9 @@ Open the vibezAI music player (launch it if not running). Search Apple Music for
 ### Test 24: Slack — find a dated message and save its attachment
 Open Slack. Find the DM conversation with Oge Marques. Navigate to the first message dated 9/16. Download the image attached to that message into ~/Downloads, then open the downloaded image. Tests: search within a chat app, scrolling/navigating by date, hovering to reveal a download control, a file-save flow, and verifying the file landed.
 
+### Test 25: Slack — open the first link in a dated DM
+Open Slack, go to the DM with Johan Barthelemy, find the messages from Sept 16, and open the first hyperlink in that day's conversation in the browser. Tests: navigating a *different* DM (not the one already open), locating a date divider that may be scrolled away, distinguishing a link from plain text, and cross-app handoff to the browser.
+
 ---
 
 ## Scoring
