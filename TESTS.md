@@ -147,8 +147,10 @@ Open Slack. Find the DM conversation with Oge Marques. Navigate to the first mes
 | 20 | Timed full workflow | ✅ | – | **39.0s** wall clock; ~1.5s desktop, rest is model turns |
 | 21 | Command runner | ✅ | 78% | |
 | 22 | Tic-tac-toe | ✅ | – | 6.3s, 4 moves, 0 LLM calls; first attempt read a cartoon |
+| 23 | vibezAI music | ✅ | 44%→launched | search→play→volume 25%→wait→T→n; sink was muted |
+| 24 | Slack dated attachment | ✅ | substring | already on 9/16; download had no dialog |
 
-**21/22 pass, 1 partial.** kev resolved 10 natural-language targets, 9 correct;
+**23/24 pass, 1 partial.** kev resolved 10 natural-language targets, 9 correct;
 the one miss was 57% (barely over gate) between two same-class windows.
 
 Three bugs found and fixed by the run: tool-result image format, click

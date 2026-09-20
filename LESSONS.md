@@ -398,3 +398,16 @@ Click the icon to open a panel at screen ≈(1057–1440, 30–430):
 - Per-app SOURCES section with its own sliders — this is how a single app
   (e.g. Chromium) ends up muted while the sink is fine.
 - `Escape` closes it.
+
+## 24. Slack (desktop app)
+
+- Date dividers ("Wednesday, September 16th") are real DOM rows — scroll to
+  them to find a day's first message.
+- Image attachments show a hover toolbar at the thumbnail's top-right: a
+  **download icon** (⬇ in a box) then a ⋮ menu. Clicking download saves
+  straight to `~/Downloads/<original-name>` with **no dialog**. Verify with
+  `ls -t ~/Downloads | head -1`.
+- `Ctrl+F` opens "Search messages in this channel".
+- Window title is `"<Person> (DM) - <Workspace> - Slack"` — kev matches
+  "slack" alone at 100% when it's open.
+- `xdg-open image.png` → imv (title shows dims and path).
