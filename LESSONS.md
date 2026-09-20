@@ -378,6 +378,42 @@ Also: `hl.dsp.exec_cmd({cmd="strata"})` silently did nothing twice;
 it after N seconds — obvious in hindsight, cost a confused minute.
 Screensaver: `omarchy toggle screensaver` is the native way, not systemd-inhibit.
 
+## 21b. Chromium (class `chromium`) — app profile
+
+**Launch:** `chromium` — single-instance: a second launch opens a window in
+the existing process (so `launch` may return an existing address).
+Title: `"<page title> - Chromium"`. **kev:** describe by page content
+("the browser on omarchy.org", "the tab about screen timeout") → 65–100%.
+"chromium" alone is ambiguous when several windows are open → pass an address.
+
+**Layout (fractions of window, any size):**
+- Tab strip y≈0.024; tabs ~0.055 wide starting x≈0.03 (in a 701-wide
+  window ~18 tabs fit, titles truncated to 3–4 chars — the favicon is the
+  only reliable identifier). New-tab `+` right after the last tab.
+- Address bar y≈0.073, x 0.11–0.85. Bookmarks bar y≈0.117.
+- Page content starts y≈0.15.
+
+**Keys (all work via wtype):** `Ctrl+T` new tab · `Ctrl+L` focus address bar
+· `Ctrl+W` close tab · `Ctrl+Tab`/`Ctrl+Shift+Tab` next/prev tab ·
+`Ctrl+1..8` tab N, `Ctrl+9` last · `Home`/`End` page top/bottom ·
+`Page_Up/Down` · `/` focuses search on Google/GitHub pages · `Escape`.
+
+**Pointer:**
+- **First click on a tab often only shows the hover preview** (thumbnail
+  card, "Memory usage: NNN MB") instead of switching. Click again, or use
+  `Ctrl+N`. Prefer keyboard for tab switching.
+- Wheel scroll is smooth and reliable (unlike Slack): ~60px per notch.
+- Right-click on page gives the standard menu; on a tab gives tab menu.
+
+**Verification:** window title changes on navigation — `wait_for
+title_change --match <word>` is the reliable "page loaded" signal
+(T10: 1.2s; T13: fired on both "GitHub" and "search"). Don't sleep.
+
+**Two Chromiums, same title** (both on a Google search) is common here —
+kev cannot separate them; use `desktop` and pass the address.
+
+**a11y:** 0 elements without `--force-renderer-accessibility` at launch.
+
 ## 22. vibezAI (foot terminal titled "vibezAI-player") — app profile
 
 **Launch:** `nohup foot --title vibezAI-player -e vibezAI &` — a Go TUI inside
