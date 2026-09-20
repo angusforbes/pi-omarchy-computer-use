@@ -378,31 +378,38 @@ Also: `hl.dsp.exec_cmd({cmd="strata"})` silently did nothing twice;
 it after N seconds — obvious in hindsight, cost a confused minute.
 Screensaver: `omarchy toggle screensaver` is the native way, not systemd-inhibit.
 
-## 22. vibezAI (terminal Apple Music player, ~/Work/vibezAI)
+## 22. vibezAI (foot terminal titled "vibezAI-player") — app profile
 
-Go TUI, keyboard-only, two columns: **Tracks** (left) | **Search** (right).
-Launch: `vibezAI` in a terminal. Search sources cycle with `Ctrl+/`:
-AM (Apple Music) → AI (Claude plans terms) → SV (saved lists) → FE (recs).
+**Launch:** `nohup foot --title vibezAI-player -e vibezAI &` — a Go TUI inside
+a terminal, so its window class is `foot`; target it by title.
+Move to a workspace + `hypr fullscreen` for the two-column layout.
+**kev:** "the vibezAI music player" → 44% when NOT running (correct: below
+gate); by title substring "vibezAI" once it is.
 
-Search flow: `Ctrl+'` (start typing) → text → `Enter` (runs AM search).
-Results: `Ctrl+↑/↓` move highlight · `→` open/fold section · `Ctrl+→` toggle
-select · `Ctrl+,` add to Tracks · **`Ctrl+.` add and play**.
-Tracks: `space` play/pause · `n`/`p` next/prev · `T` insert 5 random from
-library · `R` 5 related · `c` clear · `Tab` swap columns · `:q` quit.
-No in-app volume — use `wpctl set-volume @DEFAULT_AUDIO_SINK@ 25%` or the
-omarchy bar widget.
+**Layout:** Now Playing bar top · **Tracks** column left · **Search** column
+right · live keymap footer (bottom, y≈0.94). Search sources cycle with
+`Ctrl+/`: AM (Apple Music) → AI (Claude plans terms) → SV (saved) → FE (recs).
 
-vibezAI gotchas from T23:
-- Every visual row in Search is a highlight stop: section headers (Playlists,
-  Albums, Tracks), "+ 5 more", "- 5 less". Albums are one row each despite
-  showing two lines. Count rows from a screenshot; don't guess.
-- `Ctrl+.` on a section header does nothing useful — land on an actual item.
-- `wtype -M ctrl -k apostrophe` / `-k period` for `Ctrl+'` / `Ctrl+.`.
-- After `T`, "⏳ Picking songs from your library…" shows in Now Playing for
-  ~3-5s; the tracklist count updates when done.
-- Audio comes out as a PipeWire stream named "Google Chrome" (headless Chrome).
+**Keys:**
+- Search: `Ctrl+'` start typing · text · `Enter` runs AM search ·
+  `Ctrl+↑/↓` move highlight · `→` open/fold section · `Ctrl+→` toggle select ·
+  `Ctrl+,` add to Tracks · **`Ctrl+.` add and play** · `Tab` back to Tracks.
+- Tracks: `space` play/pause · `n`/`p` next/prev · `T` insert 5 random
+  library songs after highlight · `R` 5 related · `c` clear · `:q` quit.
+- wtype names: `-k apostrophe` for `'`, `-k period` for `.`, `-k slash`.
 
-## 23. Omarchy bar Audio widget (omarchy.audio, bar x≈1351–1378)
+**Gotchas:**
+- Every visible row in Search is a highlight stop — section headers
+  (Playlists/Albums/Tracks), "+ 5 more", "- 5 less" all count. Albums are one
+  row despite two display lines. Count from a screenshot; don't guess.
+- `Ctrl+.` on a section header does nothing — land on an item.
+- After `T`, Now Playing shows "⏳ Picking songs from your library…" for
+  3–5s; the Tracks count updates when done.
+- No in-app volume. Audio is a PipeWire stream named **"Google Chrome"**
+  (headless Chrome). Set volume with `wpctl set-volume @DEFAULT_AUDIO_SINK@
+  25%` or the bar's audio widget (§23).
+
+## 23. Omarchy bar — Audio widget (omarchy.audio) — app profile
 
 Click the icon to open a panel at screen ≈(1057–1440, 30–430):
 - Mute toggle: switch at ≈(1395, 65). Label under "Audio" reads MUTED/MURMUR/
@@ -414,31 +421,32 @@ Click the icon to open a panel at screen ≈(1057–1440, 30–430):
   (e.g. Chromium) ends up muted while the sink is fine.
 - `Escape` closes it.
 
-## 24. Slack (desktop app)
+## 24. Slack (class `slack`) — app profile
 
-- Date dividers ("Wednesday, September 16th") are real DOM rows — scroll to
-  them to find a day's first message.
-- Image attachments show a hover toolbar at the thumbnail's top-right: a
-  **download icon** (⬇ in a box) then a ⋮ menu. Clicking download saves
-  straight to `~/Downloads/<original-name>` with **no dialog**. Verify with
-  `ls -t ~/Downloads | head -1`.
-- `Ctrl+F` opens "Search messages in this channel".
-- Window title is `"<Person> (DM) - <Workspace> - Slack"` — kev matches
-  "slack" alone at 100% when it's open.
-- `xdg-open image.png` → imv (title shows dims and path).
+**Launch:** `slack` (Electron). Title: `"<Person> (DM) - <Workspace> - Slack"`
+or `"<Channel> ... - Slack"`. **kev:** "slack" → 100% when open, 37% when not.
 
-Slack navigation (from T25):
-- **`Ctrl+K`** → type a name → `Enter` opens that DM. First result is the 1:1;
-  group DMs listed below. Much faster than hunting the sidebar.
-- **Mouse-wheel scrolling in the message pane is unreliable**: heavy dampening
-  on slow wheel events (~4px/step), acceleration on fast ones (20 steps jumped
-  from 9/16 back to July 29th), and it snaps to the latest message on
-  overshoot. **Use `Page_Up`/`Page_Down`** after clicking in the message pane
-  — deterministic, one screen per press.
-- The sticky date header ("Wednesday, September 16th ▾") shows which day the
-  *top visible* message belongs to. Use it to know where you are.
-- Inline links render as `🔗 domain` chips; link previews (unfurls) below
-  them are also clickable but the chip is the reliable target.
-- Clicking a link opens it in the default browser, reusing an existing
-  Chromium window and switching its active tab. Verify by checking the
-  window title changed.
+**Navigation — use the keyboard, not the sidebar:**
+- **`Ctrl+K`** → type a name → `Enter` opens that DM/channel. First result is
+  the 1:1; group DMs listed below. Far faster than hunting the sidebar.
+- **`Ctrl+F`** opens "Search messages in this channel".
+- **Scrolling the message pane by wheel is unreliable**: slow steps move
+  ~4px, fast steps accelerate and overshoot by weeks, and it snaps to the
+  latest message on overshoot. **Click in the message pane, then use
+  `Page_Up`/`Page_Down`** — deterministic, one screen per press.
+- Sticky date header ("Wednesday, September 16th ▾", x≈0.63 y≈0.17) names
+  the day of the top visible message. Use it to know where you are.
+
+**Content:**
+- Inline links render as `🔗 domain` chips; the chip is the reliable click
+  target (the unfurl card below is also clickable). Clicking opens the
+  default browser, reusing an existing Chromium window and switching its
+  active tab — verify by the window title changing.
+- Image attachments: hover the thumbnail → toolbar at its top-right:
+  **⬇ download** then ⋮. Download saves to `~/Downloads/<original-name>`
+  with **no dialog**. Verify: `ls -t ~/Downloads | head -1`.
+- Date dividers are real DOM rows; scroll to one to find a day's first message.
+
+**a11y:** 0 AT-SPI elements without `--force-renderer-accessibility`.
+Vision + fractions only.
+
