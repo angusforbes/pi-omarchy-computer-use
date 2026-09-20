@@ -205,3 +205,44 @@ grim -s 1 -g "0,0 1440x900" -t png /tmp/full-desktop.png
 ```
 Uses logical resolution (1440×900 on this machine). Useful for seeing the
 complete layout including tab bars, workspace indicators, etc.
+
+## 12. Window addresses go stale — never cache them
+
+Hyprland window addresses are heap pointers. When the user closes and
+reopens an app, the address changes. Terminal `0x55a673286d30` became
+`0x561283a7ce40` after a close/reopen. **Always re-query `hyprctl clients -j`
+at the start of each action sequence.** Never hardcode or carry addresses
+across turns.
+
+Also: windows move between workspaces. The terminal was on ws1, then ws2.
+Query by class+title, not by remembered workspace.
+
+## 13. Percentages vs anchored offsets
+
+Window-relative percentages (x_pct/y_pct) work for **layout that scales with
+the window** (a webpage that reflows, a maximized app). They **break** for
+fixed-size elements centered in a variable-width container.
+
+Google's tic-tac-toe grid is a fixed 210×210px square inside a 650px-wide
+results card. At window width 1416 the card is at x=150; at 701 it's at x=8.
+The grid center moves, but the cell spacing (70px) does not.
+
+**Pattern:** find a locatable anchor (card center, a known button), then use
+fixed pixel offsets from it. `ttt.sh` does: `grid_center()` → `cx + (col-2)*70`.
+
+## 14. Idle inhibitor for long test runs
+
+`systemd-inhibit --what=idle --who=Grip --why="testing" --mode=block sleep 1800 &`
+Blocks the screensaver for 30 min. `movecursor` dispatches also count as
+activity, but long think-pauses between actions can trigger idle.
+
+## 15. Google Tic-Tac-Toe (Medium) — solved
+
+The Medium AI is deterministic. Winning sequence as X (0-indexed r,c):
+1. [2,2] center → O plays [2,3]
+2. [1,1] corner → O plays [3,3]
+3. [1,3] block → O plays [3,1]
+4. [1,2] → **X wins top row**
+
+~0.9s between moves is the minimum; 0.7s and the second click is swallowed
+by O's animation. 4 moves ≈ 3.5s blind. `ttt.sh` has the full flow.

@@ -7,15 +7,33 @@
 #   shot [name]    — screenshot the board area
 #   score          — screenshot the score area
 
-# Board geometry as FRACTIONS of the Chromium window.
-# Measured from a 1416x850 window: the teal board is at ~y 44%-76%, x 11%-56%.
-# Grid cells within the board:
-BOARD_X0=0.245   # left edge of playable grid (fraction of window width)
-BOARD_X1=0.415   # right edge
-BOARD_Y0=0.49    # top of grid
-BOARD_Y1=0.72    # bottom of grid
-RESTART_Y=0.78   # "Restart game" button
-RESTART_X=0.33
+# Board geometry: the Google TTT grid is a FIXED ~210x210 logical px square,
+# horizontally centered in the results column. The results column is
+# left-aligned at ~x=8px in narrow windows, and ~x=150px in wide windows.
+# Rather than percentages (which break on resize), we locate the grid center
+# and use fixed cell spacing.
+#
+# Grid center X = center of the search results card
+# Grid center Y = fixed offset from top (~62% of a 850px-tall window)
+GRID_SIZE=210      # logical px, full 3x3 grid
+CELL=70            # logical px per cell
+GRID_CY_PCT=0.62   # grid center Y as fraction of window height
+RESTART_DY=135     # Restart button is ~135px below grid center
+
+grid_center() {
+  # prints "cx cy" in logical coords
+  read -r ADDR WX WY WW WH <<< "$(win_info)"
+  if [ -z "$ADDR" ]; then echo "ERROR"; return 1; fi
+  # Results card: in narrow window starts at x≈8, width≈650. In wide, x≈150, width≈650.
+  # Card is always ~650px wide. Card center = WX + card_left + 325.
+  # card_left ≈ 8 if WW < 900 else 150
+  python3 -c "
+ww=$WW; wx=$WX; wy=$WY; wh=$WH
+card_left = 8 if ww < 900 else 150
+cx = wx + card_left + 325
+cy = wy + int(wh * $GRID_CY_PCT)
+print(f'{cx} {cy}')"
+}
 
 win_info() {
   hyprctl clients -j | python3 -c "
@@ -26,23 +44,15 @@ for c in json.load(sys.stdin):
         break"
 }
 
-pct_to_logical() {
-  # args: xpct ypct → prints "x y" in logical coords
-  local xp=$1 yp=$2
-  read -r ADDR WX WY WW WH <<< "$(win_info)"
-  if [ -z "$ADDR" ]; then echo "ERROR: no tictactoe window"; return 1; fi
-  python3 -c "print(f'{int($WX + $xp * $WW)} {int($WY + $yp * $WH)}')"
-}
-
-cell_pct() {
-  # args: row col (1-3) → prints "xpct ypct"
+cell_logical() {
+  # args: row col (1-3) → prints "x y" in logical coords
   local r=$1 c=$2
+  read -r cx cy <<< "$(grid_center)"
   python3 -c "
-bx0,bx1,by0,by1 = $BOARD_X0,$BOARD_X1,$BOARD_Y0,$BOARD_Y1
-cw=(bx1-bx0)/3; ch=(by1-by0)/3
-x=bx0 + cw*($c-1) + cw/2
-y=by0 + ch*($r-1) + ch/2
-print(f'{x:.4f} {y:.4f}')"
+cx,cy=$cx,$cy; cell=$CELL
+x = cx + ($c-2)*cell
+y = cy + ($r-2)*cell
+print(f'{x} {y}')"
 }
 
 focus_game() {
@@ -81,35 +91,29 @@ for c in json.load(sys.stdin):
     ;;
   click)
     focus_game || exit 1
-    read -r xp yp <<< "$(cell_pct $2 $3)"
-    read -r x y <<< "$(pct_to_logical $xp $yp)"
+    read -r x y <<< "$(cell_logical $2 $3)"
     hyprctl dispatch "hl.dsp.cursor.move({ x = $x, y = $y })" >/dev/null
     sleep 0.03; wlrctl pointer click
-    echo "clicked [$2,$3] at pct($xp,$yp) → logical($x,$y)"
+    echo "clicked [$2,$3] → ($x,$y)"
     ;;
   restart)
     focus_game || exit 1
-    read -r x y <<< "$(pct_to_logical $RESTART_X $RESTART_Y)"
-    hyprctl dispatch "hl.dsp.cursor.move({ x = $x, y = $y })" >/dev/null
+    read -r cx cy <<< "$(grid_center)"
+    y=$((cy + RESTART_DY))
+    hyprctl dispatch "hl.dsp.cursor.move({ x = $cx, y = $y })" >/dev/null
     sleep 0.03; wlrctl pointer click
-    echo "restart clicked at ($x,$y)"
+    echo "restart clicked at ($cx,$y)"
     ;;
   shot)
     focus_game || exit 1
-    read -r ADDR WX WY WW WH <<< "$(win_info)"
-    read -r x0 y0 <<< "$(pct_to_logical $BOARD_X0 $BOARD_Y0)"
-    read -r x1 y1 <<< "$(pct_to_logical $BOARD_X1 $BOARD_Y1)"
-    # Add margin
-    x0=$((x0-40)); y0=$((y0-30)); w=$((x1-x0+80)); h=$((y1-y0+60))
+    read -r cx cy <<< "$(grid_center)"
+    half=$((GRID_SIZE/2 + 40))
+    x0=$((cx-half)); y0=$((cy-half-20)); w=$((half*2)); h=$((half*2+40))
     grim -s 1 -g "$x0,$y0 ${w}x${h}" -t jpeg -q 85 "/tmp/ttt-${2:-board}.jpg"
     echo "/tmp/ttt-${2:-board}.jpg"
     ;;
-  score)
-    focus_game || exit 1
-    read -r x0 y0 <<< "$(pct_to_logical 0.18 0.36)"
-    read -r x1 y1 <<< "$(pct_to_logical 0.50 0.42)"
-    grim -s 1 -g "$x0,$y0 $((x1-x0))x$((y1-y0))" -t jpeg -q 85 /tmp/ttt-score.jpg
-    echo "/tmp/ttt-score.jpg"
+  center)
+    grid_center
     ;;
   *)
     echo "usage: ttt.sh setup|click r c|restart|shot [name]|score"
