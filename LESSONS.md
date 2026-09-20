@@ -328,7 +328,7 @@ is also the signal that the app may need launching.
 
 Start: `./kev-serve.sh` (in this repo). Bench: `python3 kev_bench.py`.
 
-## 20. Drag-and-drop does not work with the split-device stack (T16 partial)
+## 20. Drag-and-drop: hyprdesk's unified pointer works; Strata has no DnD (T16)
 
 Strata never enters drag mode with `ydotool click 0x40` (press) +
 `hyprctl movecursor` (motion) + `ydotool click 0x80` (release). No drag
@@ -340,10 +340,13 @@ motion from the compositor's cursor dispatcher — two different pointers on
 the seat. Wayland DnD (`wl_data_device.start_drag`) requires an implicit
 grab on the *same* pointer that pressed the button.
 
-Fix requires one virtual pointer emitting both motion and buttons
-(`zwlr_virtual_pointer_v1` with `motion_absolute` + `button`). `wlrctl` only
-exposes `click`, not separate press/release. Options: a ~60-line C/Python
-wlr-virtual-pointer client, or use hypruse's `pointer drag`. Parked.
+**Resolved with hyprdesk** (`pointer drag`, one `zwlr_virtual_pointer_v1`
+client for press+motion+release). Mid-drag screenshot shows Strata doing a
+**rubber-band sweep-select** across the rows passed — i.e. the app receives a
+proper drag gesture; it just implements sweep-select, not row DnD. Strata's
+move UX is the context menu's "Move to…" or Ctrl+X / Ctrl+V.
+So: pointer ✓, Strata DnD ✗ (by design). Retest DnD on an app that has it
+(a browser file upload zone, GIMP, Blender).
 
 Workaround for file moves: Strata's context menu has "Move to…" / "Copy to…",
 or just `mv` in a terminal.

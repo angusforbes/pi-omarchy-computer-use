@@ -143,7 +143,7 @@ Open Slack, go to the DM with Johan Barthelemy, find the messages from Sept 16, 
 | 13 | Browser form fill | ✅ | – | GitHub repo search |
 | 14 | Multi-workspace roundtrip | ✅ | 100/57/86% | one wrong pick at 57% — see Lesson 21 |
 | 15 | Window management | ✅ | – | move ws3→ws4→ws3 |
-| 16 | Drag and drop | 🔁 | – | split-device stack can't DnD — Lesson 20 |
+| 16 | Drag and drop | 🔁 | – | hyprdesk pointer ✓ (sweep-select seen mid-drag); Strata has no row DnD |
 | 17 | Multi-tab navigation | ✅ | – | Chromium hover-preview ate first click |
 | 18 | Keyboard chain | ✅ | 78% | |
 | 19 | Read screen → act | ✅ | 99% | exposed screenshot-wrong-workspace bug, fixed |
