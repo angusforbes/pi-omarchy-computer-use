@@ -327,3 +327,38 @@ the calibration: gate at p ≥ 0.5, fall through to Claude below it. Below-gate
 is also the signal that the app may need launching.
 
 Start: `./kev-serve.sh` (in this repo). Bench: `python3 kev_bench.py`.
+
+## 20. Drag-and-drop does not work with the split-device stack (T16 partial)
+
+Strata never enters drag mode with `ydotool click 0x40` (press) +
+`hyprctl movecursor` (motion) + `ydotool click 0x80` (release). No drag
+ghost during the hold, no drop-target highlight, file doesn't move. A ghost
+appears *after* release — the app is only seeing a click-select.
+
+Likely cause: the button events come from ydotool's uinput device and the
+motion from the compositor's cursor dispatcher — two different pointers on
+the seat. Wayland DnD (`wl_data_device.start_drag`) requires an implicit
+grab on the *same* pointer that pressed the button.
+
+Fix requires one virtual pointer emitting both motion and buttons
+(`zwlr_virtual_pointer_v1` with `motion_absolute` + `button`). `wlrctl` only
+exposes `click`, not separate press/release. Options: a ~60-line C/Python
+wlr-virtual-pointer client, or use hypruse's `pointer drag`. Parked.
+
+Workaround for file moves: Strata's context menu has "Move to…" / "Copy to…",
+or just `mv` in a terminal.
+
+## 21. kev gate: 50% is right, but similar-titled windows can clear it wrongly
+
+"the agent discussing Heeler" → kev picked "Claude Code" at 57% over "Heeler
+app not seeing herdr app" (two `org.omarchy.agent` panes). "the Heeler app
+conversation" → 86% correct. Inference ("discussing X") is weaker than
+keyword presence ("X app"). When two windows share a class, keep a
+distinguishing title word in the query. When two windows share a *title*
+(two Chromiums both on "tictactoe - Google Search"), no model can pick —
+use `window_address`.
+
+Also: `hl.dsp.exec_cmd({cmd="strata"})` silently did nothing twice;
+`nohup strata &` from bash worked. And `timeout N app &` for a GUI app kills
+it after N seconds — obvious in hindsight, cost a confused minute.
+Screensaver: `omarchy toggle screensaver` is the native way, not systemd-inhibit.
