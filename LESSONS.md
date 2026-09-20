@@ -376,3 +376,25 @@ Tracks: `space` play/pause · `n`/`p` next/prev · `T` insert 5 random from
 library · `R` 5 related · `c` clear · `Tab` swap columns · `:q` quit.
 No in-app volume — use `wpctl set-volume @DEFAULT_AUDIO_SINK@ 25%` or the
 omarchy bar widget.
+
+vibezAI gotchas from T23:
+- Every visual row in Search is a highlight stop: section headers (Playlists,
+  Albums, Tracks), "+ 5 more", "- 5 less". Albums are one row each despite
+  showing two lines. Count rows from a screenshot; don't guess.
+- `Ctrl+.` on a section header does nothing useful — land on an actual item.
+- `wtype -M ctrl -k apostrophe` / `-k period` for `Ctrl+'` / `Ctrl+.`.
+- After `T`, "⏳ Picking songs from your library…" shows in Now Playing for
+  ~3-5s; the tracklist count updates when done.
+- Audio comes out as a PipeWire stream named "Google Chrome" (headless Chrome).
+
+## 23. Omarchy bar Audio widget (omarchy.audio, bar x≈1351–1378)
+
+Click the icon to open a panel at screen ≈(1057–1440, 30–430):
+- Mute toggle: switch at ≈(1395, 65). Label under "Audio" reads MUTED/MURMUR/
+  etc. The label can lag — **verify with `wpctl get-volume @DEFAULT_AUDIO_SINK@`**
+  after every click, don't trust the picture.
+- OUTPUT slider: track ≈ x 1077→1412 at y≈147. Clicking at a point sets that
+  fraction directly (25% → x=1161). Worked first try.
+- Per-app SOURCES section with its own sliders — this is how a single app
+  (e.g. Chromium) ends up muted while the sink is fine.
+- `Escape` closes it.
