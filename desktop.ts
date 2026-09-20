@@ -281,8 +281,17 @@ export default function (pi: ExtensionAPI) {
           case "screenshot": {
             const win = await findWindow(params.window_address, params.search);
             if (!win) return err(notFound(params.search));
-            const [wx, wy] = win.at;
-            const [ww, wh] = win.size;
+            // grim captures what's on screen; if the window is on another workspace we'd
+            // grab whatever is at its coordinates here. Focus first (switches workspace),
+            // then re-read geometry (focus can change size, e.g. fullscreen state).
+            const active = getActiveWindow();
+            if (active?.address !== win.address) {
+              focusWindow(win.address);
+              await sleep(120);
+            }
+            const fresh = getClients().find((c: any) => c.address === win.address) ?? win;
+            const [wx, wy] = fresh.at;
+            const [ww, wh] = fresh.size;
             const tmpFile = join(tmpdir(), `pi-desktop-${randomUUID()}.jpg`);
             try {
               runFile("grim", ["-s", "1", "-g", `${wx},${wy} ${ww}x${wh}`, "-t", "jpeg", "-q", "90", tmpFile]);
