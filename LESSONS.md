@@ -274,3 +274,29 @@ OpenDecision (ModernBERT-large zero-shot NLI, ~400M):
 Use it for **classification** ("which window is the file browser?", "is this
 a dialog or a page?"), not for anything needing lookahead. For deterministic
 games, compute the move; for judgment, use Claude.
+
+## 18. OpenDecision for window selection — also wrong tool
+
+Tried `window_pick.py`: describe each open window as text, ask OpenDecision
+"which matches the user's request?". Results on 6 open windows:
+
+| Query | OpenDecision | Correct? |
+|---|---|---|
+| "Claude Code" | tie 0.31 between "Claude Code" and "tictactoe" | ✗ |
+| "the tic tac toe game" | ranked "tictactoe" 3rd at 0.15, behind two terminals | ✗ |
+| "the AI agent pane" | NONE (0.32) | ✗ |
+| "a terminal" | foot ✓ | ✓ |
+
+Near-uniform ~0.31 across options = the model can't discriminate. It's an
+NLI model (premise entails hypothesis?) trained on full sentences; short
+labels, proper nouns, and concatenated tokens ("tictactoe") defeat it.
+
+A 20-line token-overlap matcher beat it on 2 of 4 hard cases at 0.1ms.
+
+**Conclusion:** zero-shot NLI ≠ decision model. For "pick from N labeled
+options", either compute it (string match, minimax) or use something trained
+for calibrated choice (Jev/RLCD). Cold start (61s GPU triton JIT) also
+makes OpenDecision impractical as an on-demand sidecar.
+
+Next: try Jev API on the same window_pick queries. If it nails them, wire it
+in behind a confidence gate; below the gate, fall through to Claude.
