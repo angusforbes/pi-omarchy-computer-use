@@ -300,3 +300,33 @@ makes OpenDecision impractical as an on-demand sidecar.
 
 Next: try Jev API on the same window_pick queries. If it nails them, wire it
 in behind a confidence gate; below the gate, fall through to Claude.
+
+## 19. kev-4b: the fast model that actually works (window selection 9/9)
+
+[kev](https://github.com/jaredpalmer/kev) = Qwen3 + LoRA + pointer head, trained
+supervised on choice-from-options. Jev-compatible `/v1/systemone`. Local.
+
+| model | window-pick accuracy | warm latency | VRAM | notes |
+|---|---|---|---|---|
+| OpenDecision (NLI) | ~30% | 80ms | 1.5GB | near-uniform probs, 61s cold start |
+| kev-0.6b fp32 | 5/8 | 77ms | 1.5GB | overconfident on wrong answers |
+| **kev-4b NF4** | **9/9** | **173ms** | **3.6GB** | well-calibrated: matches 0.57–1.0, non-matches 0.26–0.43 |
+
+**Setup gotchas (cost ~1 hour):**
+- `HF_HUB_DISABLE_XET=1` — hf-xet transfer backend hangs silently with zero output.
+  Every HF download on this machine needs it.
+- kev-4b bf16 = 7.45GB, OOMs on the 8GB card by 48MB. Patched kev to support
+  `KEV_QUANT=nf4` (bitsandbytes 4-bit): 3.6GB, loads in 60s. Patch is in
+  ~/Work/kev (model.py + evaluate.py), 12 lines. Should upstream.
+- `pgrep -f "kev.serve"` matches your own bash -c wrapper. Use
+  `ps aux | grep "[m] kev.serve" | grep -v "bash -c"`. I spent 20 minutes
+  debugging a "hung server" that was my own diagnostic shell.
+- Launch via a script file with `nohup script.sh > log &`. Inline
+  `nohup VAR=x cmd &` and `setsid` both lost env/redirects in this harness.
+
+**Do NOT add an explicit "none of these" option.** Both sizes treat it as a
+probability sink and start refusing real matches (4b: 9/9 → 6/9). Instead use
+the calibration: gate at p ≥ 0.5, fall through to Claude below it. Below-gate
+is also the signal that the app may need launching.
+
+Start: `./kev-serve.sh` (in this repo). Bench: `python3 kev_bench.py`.
