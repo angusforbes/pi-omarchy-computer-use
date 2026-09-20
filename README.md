@@ -71,3 +71,15 @@ Full file-browser-to-terminal pipeline (switch workspace → click file → copy
 ## License
 
 MIT
+
+## Status (2026-09-20): superseded by hyprdesk
+
+`desktop.ts` has been retired. Everything it did — and its three unique
+features (kev natural-language `search`, `x_pct`/`y_pct`, the training log)
+— now lives in [hyprdesk](https://github.com/angusforbes/hyprdesk), a fork
+of hypruse that also brings `sequence`, `wait_for`, event-driven `launch`,
+a unified virtual pointer (drag works) and a CLI. One tool instead of two.
+
+This repo keeps: LESSONS.md (app profiles + hard-won notes), TESTS.md (25
+tests, results), kev_bench.py / kev-serve.sh, ttt.sh / ttt_fast.py, and the
+retired extension for reference.
