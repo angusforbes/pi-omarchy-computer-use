@@ -284,7 +284,7 @@ export default function (pi: ExtensionAPI) {
               const data = imgBuf.toString("base64");
               return {
                 content: [
-                  { type: "image", source: { type: "base64", mediaType: "image/jpeg", data } },
+                  { type: "image", data, mimeType: "image/jpeg" },
                   { type: "text", text: `Screenshot of ${win.class} — "${win.title}" (${ww}×${wh} at ${wx},${wy})${pickNote()}. Use x_pct/y_pct (0.0-1.0) to click relative to window: 0.0=left/top, 0.5=center, 1.0=right/bottom. Or x_px/y_px for pixel offset.` },
                 ],
                 details: {},

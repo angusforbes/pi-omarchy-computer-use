@@ -117,18 +117,15 @@ grim -s 1 -g "x,y WxH" -t png /tmp/out.png
 
 ## 5. Pi extension image return format
 
-Pi's tool return content blocks use **camelCase** `mediaType`, not Anthropic's
-snake_case `media_type`:
+Tool-result image blocks are **flat**, per `docs/session-format.md`:
 ```typescript
-{
-  type: "image",
-  source: {
-    type: "base64",
-    mediaType: "image/png",   // NOT media_type
-    data: base64String,
-  },
-}
+{ type: "image", data: base64String, mimeType: "image/jpeg" }
 ```
+NOT `{type:"image", source:{type:"base64", mediaType, data}}` — that's the
+Anthropic wire format, and it's what `docs/extensions.md` line ~1450 shows for
+`sendUserMessage`, which is misleading. Using it in a tool result throws
+`The first argument must be of type string, Buffer...` deep in pi's
+attachment handling. Cost two separate debugging sessions.
 
 ## 6. Running input from pi's bash
 
