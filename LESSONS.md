@@ -246,3 +246,31 @@ The Medium AI is deterministic. Winning sequence as X (0-indexed r,c):
 
 ~0.9s between moves is the minimum; 0.7s and the second click is swallowed
 by O's animation. 4 moves ≈ 3.5s blind. `ttt.sh` has the full flow.
+
+## 16. Fast tic-tac-toe: pixel reader + minimax (ttt_fast.py)
+
+`ttt_fast.py --no-model` plays a full game in **5.1s with zero LLM calls**:
+- grim crop of board: 40ms
+- pixel-sample 9 cells (ring of 12 points at r=18 + center + diagonals): <5ms
+- minimax: 0-4ms
+- click via ttt.sh: 240ms
+- wait for O's animation: 900ms
+Per turn ≈ 280ms + 900ms wait.
+
+**O is a hollow ring** — sampling only the cell center reads teal (empty).
+Must sample a ring of points at the O's radius. Cost me a 2,300-iteration
+infinite loop before I added `max_turns` and stale-board detection.
+
+**Always guard autonomous loops**: max iterations + "did the state change
+after my action?" check. If not, screenshot and bail.
+
+## 17. OpenDecision is the wrong tool for game moves
+
+OpenDecision (ModernBERT-large zero-shot NLI, ~400M):
+- GPU first call: **61s** (triton JIT). Warm: **80ms**. CPU: **8s/call**.
+- Picked the wrong tic-tac-toe cell every time, even with "(WINS immediately)"
+  in the option text. It's text-similarity, not reasoning.
+
+Use it for **classification** ("which window is the file browser?", "is this
+a dialog or a page?"), not for anything needing lookahead. For deterministic
+games, compute the move; for judgment, use Claude.
